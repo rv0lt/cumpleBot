@@ -3,38 +3,41 @@
 import os, sys
 #   Bot programado usando la libreria de pyTelegramBot que se puede encontrar en
 #   https://github.com/eternnoir/pyTelegramBotAPI
-#
-
+import time
 import telebot
 import datetime
-import random
+import csv
 from apscheduler.schedulers.background import BackgroundScheduler
-bot_token = "TOKEN"
 from telebot import types
-bot = telebot.TeleBot(token=bot_token)
 
+bot_token = "TOKEN"
+bot = telebot.TeleBot(token=bot_token)
 text_messages = {
     'right_user':
-        u'Usa esto para acordarte de los cumples porque eres un despistado y usar una agenda es demasiado sencillo',
+        'Usa esto para acordarte de los cumples porque eres un despistado y usar una agenda es demasiado sencillo',
     'wrong_user':
-        u'Hola! Lo siento pero de momento solo mi credor puede usarme'
+        'Hola! Lo siento pero de momento solo mi credor puede usarme'
 }
 ID = 291461811
 first_time = False
 scheduler = BackgroundScheduler()
 #List with all the posible months
-months = { 'enero':01, 'febrero':02, 'marzo':03, 'abril':04, 'mayo':05, 'junio':06,
-'julio':07, 'agosto':05, 'septiembre':05, 'octubre':10, 'noviembre':11, 'diciembre':12}
+months = { 'enero':1, 'febrero':2, 'marzo':3, 'abril':4, 'mayo':5, 'junio':6,
+'julio':7, 'agosto':8, 'septiembre':9, 'octubre':10, 'noviembre':11, 'diciembre':12}
 #List with all the posibles days of the month
 days = []
 days.extend(range(1, 32))
-
+commands=[
+    'start',
+    'nuevo',
+    'borrar',
+    'mostrar'
+]
 def is_me(user_id):
     return user_id == ID
 
 def search_birthdays():
     date = datetime.date.today()
-    #cumples = open("cumples.csv", "r")
     for cumple in open("cumples.csv", "r"):
         cumple = cumple.split(',')                   
         month = cumple[1]
@@ -52,8 +55,35 @@ def on_start(message):
         bot.reply_to(message, text_messages['right_user'])
         if not first_time:
             scheduler = BackgroundScheduler()
-            scheduler.add_job(search_birthdays, 'interval', days=1)
+            scheduler.add_job(search_birthdays, 'interval', seconds=4)
             scheduler.start()
+
+@bot.message_handler(commands=['borrar'])
+def on_delete(message):
+    if not is_me(message.from_user.id):
+        bot.reply_to(message, text_messages['wrong_user'])
+        return
+    msg = bot.reply_to(message, "¿De quien quierres borrar su cumpleaños?") 
+    bot.register_next_step_handler(msg, process_delete)
+
+def process_delete(message):  
+    remove_word = message.text 
+    with open("cumples.csv", "r") as f:
+        lines = f.readlines()
+    with open("cumples.csv", "w") as f:
+        for line in lines:
+            aux = line.split(',')
+            if not remove_word == aux[0]:
+                f.write(line)
+
+@bot.message_handler(commands=["mostrar"])
+def on_mostrar(message):
+    if not is_me(message.from_user.id):
+        bot.reply_to(message, text_messages['wrong_user'])
+    else:
+        with open("cumples.csv", "r") as f:
+            lines = f.readlines()
+            bot.reply_to(message, lines)
 
 @bot.message_handler(commands=["nuevo"])
 def on_nuevo(message):
@@ -69,6 +99,22 @@ def process_name_step(message):
         cumples = open("cumples.csv", "a")
         cumples.write(name + ",")
         cumples.close()
+
+        markup = types.ReplyKeyboardMarkup(row_width =2)
+        for day in days:
+            item = types.KeyboardButton(day)
+            markup.row(item)
+        msg = bot.reply_to(message, 'Dia del cumple ', reply_markup=markup)
+        bot.register_next_step_handler(msg, process_day_step)
+    except Exception as e:
+        bot.reply_to(message, 'oooops')
+
+def process_day_step(message):
+    try:
+        day = message.text
+        cumples=open("cumples.csv", "a")
+        cumples.write(day + ",")
+        cumples.close()
         markup = types.ReplyKeyboardMarkup(row_width =2)
         for month in months.keys():
             item = types.KeyboardButton(month)
@@ -81,25 +127,9 @@ def process_name_step(message):
 def process_month_step(message):
     try:
         month = message.text
-        cumples = open("cumples.csv", "a")
-        cumples.write(month + ",")
-        cumples.close()
-        markup = types.ReplyKeyboardMarkup(row_width =2)
-        for day in days:
-            item = types.KeyboardButton(day)
-            markup.row(item)
-
-        msg = bot.reply_to(message, 'Dia del cumple ', reply_markup=markup)
-        bot.register_next_step_handler(msg, process_day_step)
-    except Exception as e:
-        bot.reply_to(message, 'oooops')
-
-def process_day_step(message):
-    try:
-        day = message.text
-        cumples = open("cumples.csv", "a")
-        cumples.write(day + "\r\n")
-        cumples.close()
+        cumples=open("cumples.csv", "a")
+        cumples.write(month + "\r\n")
+        cumples.close
         bot.send_message(message.chat.id, 'cuando sea su cumple yo te lo recuerdo')
     except Exception as e:
         bot.reply_to(message, 'oooops')
@@ -117,6 +147,9 @@ bot.load_next_step_handlers()
 def on_ping(message):
     bot.reply_to(message, "Still alive and kicking!")
 
-
-bot.polling()
+while True:
+    try:
+        bot.polling()
+    except Exception:
+        time.sleep(10)
 
