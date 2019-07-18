@@ -10,7 +10,7 @@ import csv
 from apscheduler.schedulers.background import BackgroundScheduler
 from telebot import types
 
-bot_token = "791676020:AAGci5a5u4wGylHgQGtOtzCMzB45kU-mJZQ"
+bot_token = "TOKEN"
 bot = telebot.TeleBot(token=bot_token)
 text_messages = {
     'right_user':
