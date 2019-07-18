@@ -10,6 +10,7 @@ import csv
 from apscheduler.schedulers.background import BackgroundScheduler
 from telebot import types
 
+
 bot_token = "TOKEN"
 bot = telebot.TeleBot(token=bot_token)
 text_messages = {
@@ -33,18 +34,23 @@ commands=[
     'borrar',
     'mostrar'
 ]
+#Checks if the user's id
 def is_me(user_id):
     return user_id == ID
-
+#check if a given name is already register with a birthday
+def already_exists(nombre):
+    with open("cumples.csv", "r") as f:
+        lines = f.readlines()
+        for cumple in lines:
+            if(cumple.split(',')[0] == nombre): return True
+        return False
 def search_birthdays():
     date = datetime.date.today()
     print("aaa")
     for cumple in open("cumples.csv", "r"):
         cumple = cumple.split(',')                   
         day = cumple[1]
-        month = cumple[2]
-        month = month.split("\r\n")[0]
-        print(day + " " + month)
+        month = cumple[2].split("\r\n")[0]
         if (str(date.day) == day and date.month == months.get(month)):
             msg = ("¡Hoy es el cumpleaños de " + cumple[0] + " !")
             bot.send_message(291461811, msg)
@@ -58,7 +64,7 @@ def on_start(message):
         bot.reply_to(message, text_messages['right_user'])
         if not first_time:
             scheduler = BackgroundScheduler()
-            scheduler.add_job(search_birthdays, 'interval', seconds=4)
+            scheduler.add_job(search_birthdays, 'interval', hours=24)
             scheduler.start()
 
 @bot.message_handler(commands=['borrar'])
@@ -102,6 +108,8 @@ def on_nuevo(message):
 def process_name_step(message):
     try:
         name = message.text
+        if already_exists(name):
+            raise Exception()
         cumples = open("cumples.csv", "a")
         cumples.write(name + ",")
         cumples.close()
@@ -113,7 +121,7 @@ def process_name_step(message):
         msg = bot.reply_to(message, 'Dia del cumple ', reply_markup=markup)
         bot.register_next_step_handler(msg, process_day_step)
     except Exception as e:
-        bot.reply_to(message, 'oooops')
+        bot.reply_to(message, 'oooops, es posible que ese nombre exista')
 
 def process_day_step(message):
     try:
@@ -158,4 +166,3 @@ while True:
         bot.polling()
     except Exception:
         time.sleep(10)
-
