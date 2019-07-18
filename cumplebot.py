@@ -10,7 +10,7 @@ import csv
 from apscheduler.schedulers.background import BackgroundScheduler
 from telebot import types
 
-bot_token = "TOKEN"
+bot_token = "791676020:AAGci5a5u4wGylHgQGtOtzCMzB45kU-mJZQ"
 bot = telebot.TeleBot(token=bot_token)
 text_messages = {
     'right_user':
@@ -38,10 +38,13 @@ def is_me(user_id):
 
 def search_birthdays():
     date = datetime.date.today()
+    print("aaa")
     for cumple in open("cumples.csv", "r"):
         cumple = cumple.split(',')                   
-        month = cumple[1]
-        day = cumple[2][0] + cumple[2][1]
+        day = cumple[1]
+        month = cumple[2]
+        month = month.split("\r\n")[0]
+        print(day + " " + month)
         if (str(date.day) == day and date.month == months.get(month)):
             msg = ("¡Hoy es el cumpleaños de " + cumple[0] + " !")
             bot.send_message(291461811, msg)
@@ -83,7 +86,10 @@ def on_mostrar(message):
     else:
         with open("cumples.csv", "r") as f:
             lines = f.readlines()
-            bot.reply_to(message, lines)
+            msg = ""
+            for cumple in lines:
+                msg = msg + cumple + "\r\n"
+            bot.reply_to(message, msg)
 
 @bot.message_handler(commands=["nuevo"])
 def on_nuevo(message):
